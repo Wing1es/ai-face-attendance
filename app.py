@@ -103,14 +103,6 @@ def require_login():
 
 # Routes
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        if request.form['username'] == 'admin' and request.form['password'] == 'admin123':
-            session['admin'] = True
-            return redirect(url_for('dashboard'))
-    return render_template('login.html')
-
 @app.route('/logout')
 def logout():
     session.pop('admin', None)
@@ -256,6 +248,52 @@ def dashboard():
         recent_verifications=recent_verifications
     )
 
+import json
+
+CREDENTIALS_FILE = 'credentials.json'
+
+def get_admin_credentials():
+    if not os.path.exists(CREDENTIALS_FILE):
+        with open(CREDENTIALS_FILE, 'w') as f:
+            json.dump({'username': 'admin', 'password': 'admin123'}, f)
+    with open(CREDENTIALS_FILE, 'r') as f:
+        return json.load(f)
+
+def update_admin_password(new_password):
+    creds = get_admin_credentials()
+    creds['password'] = new_password
+    with open(CREDENTIALS_FILE, 'w') as f:
+        json.dump(creds, f)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        creds = get_admin_credentials()
+        if request.form['username'] == creds['username'] and request.form['password'] == creds['password']:
+            session['admin'] = True
+            return redirect(url_for('dashboard'))
+    return render_template('login.html')
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    if not session.get('admin'):
+        return redirect(url_for('login'))
+
+    error = ""
+    success = ""
+    if request.method == 'POST':
+        old_pass = request.form['old_password']
+        new_pass = request.form['new_password']
+        confirm_pass = request.form['confirm_password']
+
+        creds = get_admin_credentials()
+        if old_pass != creds['password']:
+            error = "Old password is incorrect"
+        elif new_pass != confirm_pass:
+            error = "New passwords do not match"
+        else:
+            update_admin_password(new_pass)
+            success = "Password changed successfully"
+
+    return render_template('change_password.html', error=error, success=success)
 
 @app.route('/live')
 def live_attendance():
@@ -289,7 +327,6 @@ def delete_record():
     wb.save(filename)
     return redirect(url_for('view_attendance'))
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Default fallback
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
 
