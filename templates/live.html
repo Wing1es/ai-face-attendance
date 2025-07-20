@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Face Attendance</title>
+    <link rel="shortcut icon" href="static/face-scan.png" type="image/x-icon" />
+    <link rel="icon" href="{{ url_for('static', filename='face-scan.png') }}" type="image/x-icon">
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        height: 100vh;
+        background: radial-gradient(circle at 50% 50%, #ffffff, #e9f0ff 80%);
+        color: #000;
+        font-family: "Segoe UI", sans-serif;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* ⚫️ Grid background */
+      body::before {
+        content: "";
+        position: absolute;
+        width: 200%;
+        height: 200%;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.07),
+            rgba(0, 0, 0, 0.07) 1px,
+            transparent 1px,
+            transparent 70px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.07),
+            rgba(0, 0, 0, 0.07) 1px,
+            transparent 1px,
+            transparent 70px
+          );
+        z-index: -1;
+      }
+
+      .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+      }
+
+      .glass-card {
+        position: relative;
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #dde6f3;
+        padding: 0;
+        width: 980px;
+        max-width: 95vw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+      }
+
+      .video-frame {
+        border-radius: 20px;
+        width: 100%;
+        border: 3px solid #dde6f3;
+      }
+
+      .info-box {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        top: 30px;
+        left: 40px;
+        flex-direction: column;
+        width: 140px;
+        padding: 10px;
+        gap: 8px;
+        background-color: #ffffffee;
+        border-radius: 12px;
+        border: 1px solid #d0d5e0;
+      }
+
+      .face-img {
+        width: 90px;
+        height: 90px;
+        border-radius: 12px;
+        object-fit: cover;
+        transform: scaleX(-1);
+        border: 2px solid #0d6efd;
+      }
+
+      .name-label {
+        color: #0d6efd;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .extras {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 700px;
+      }
+
+      .clock {
+        font-size: 16px;
+        color: #555;
+        margin-top: 8px;
+      }
+
+      .timeline {
+        margin-top: 10px;
+        max-height: 120px;
+        overflow-y: auto;
+        font-size: 14px;
+        background-color: #f8faff;
+        padding: 10px;
+        border-radius: 8px;
+        width: 100%;
+        color: #333;
+        font-family: monospace;
+        border: 1px solid #d6e4ff;
+      }
+
+      .timeline div {
+        padding: 2px 0;
+      }
+
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0px 22px;
+        background-color: #f5f7ff;
+        color: #0d6efd;
+        border: 1px solid #d0e2ff;
+        border-radius: 999px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 3px 8px rgba(13, 110, 253, 0.08);
+        transition: all 0.2s ease-in-out;
+        margin: 12px;
+      }
+
+      .action-btn:hover {
+        background-color: #e6f0ff;
+        transform: scale(1.03);
+        box-shadow: 0 5px 14px rgba(13, 110, 253, 0.15);
+      }
+
+      .btn-icon {
+        height: 18px;
+        width: 18px;
+        filter: brightness(0) saturate(100%) invert(30%) sepia(89%)
+          saturate(747%) hue-rotate(196deg) brightness(96%) contrast(87%);
+      }
+      .button-group {
+        display: flex;
+        gap: 16px;
+        margin-bottom: -50px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 22px;
+        background-color: #f5f7ff;
+        color: #0d6efd;
+        border: 1px solid #d0e2ff;
+        border-radius: 999px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 3px 8px rgba(13, 110, 253, 0.08);
+        transition: all 0.2s ease-in-out;
+      }
+
+      .action-btn:hover {
+        background-color: #e6f0ff;
+        transform: scale(1.03);
+        box-shadow: 0 5px 14px rgba(13, 110, 253, 0.15);
+      }
+
+      .btn-icon {
+        font-size: 16px;
+        display: inline-block;
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+            <div class="button-group">
+          <a href="/" class="action-btn">
+            <span class="btn-icon">🏠</span>
+            Back to Dashboard
+          </a>
+        </div>
+    <div class="container">
+      <div class="glass-card">
+        <!-- 💠 Elegant Buttons -->
+        <img src="{{ url_for('video_feed') }}" class="video-frame" />
+        <div id="infoBox" class="info-box">
+          <img id="faceImage" src="" alt="" class="face-img" />
+          <div id="nameLabel" class="name-label">Detecting...</div>
+        </div>
+        <div class="extras">
+          <div id="clock" class="clock">--:--:--</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </div>
+    </div>
+
+    <audio id="verifySound" src="/static/verified.mp3" preload="auto"></audio>
+
+    <script>
+      const faceImage = document.getElementById("faceImage");
+      const nameLabel = document.getElementById("nameLabel");
+      const infoBox = document.getElementById("infoBox");
+      const clock = document.getElementById("clock");
+      const timeline = document.getElementById("timeline");
+      const verifySound = document.getElementById("verifySound");
+      let lastVerified = "";
+
+      setInterval(() => {
+        const now = new Date();
+        clock.textContent = now.toLocaleTimeString();
+      }, 1000);
+
+      async function fetchNamePeriodically() {
+        while (true) {
+          try {
+            const response = await fetch("/current_name");
+            const data = await response.json();
+            const name = data.name;
+
+            if (name !== "Unknown") {
+              faceImage.src = `/static/known_faces/${name}.jpg`;
+              nameLabel.innerHTML = `${name} <br> Verified`;
+              infoBox.classList.add("verified-glow");
+
+              if (lastVerified !== name) {
+                verifySound.play();
+                const time = new Date().toLocaleTimeString();
+                timeline.innerHTML = `<div>[${time}] ✅ ${name}</div>`;
+                lastVerified = name;
+              }
+            } else {
+              faceImage.src = "";
+              nameLabel.textContent = "Detecting...";
+              infoBox.classList.remove("verified-glow");
+              lastVerified = "";
+            }
+          } catch (e) {
+            nameLabel.textContent = "Connection Error";
+            infoBox.classList.remove("verified-glow");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      fetchNamePeriodically();
+    </script>
+  </body>
+</html>

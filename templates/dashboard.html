@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Attendance</title>
+    <link rel="icon" href="{{ url_for('static', filename='face-scan.png') }}" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      :root {
+        --blue: #007bff;
+        --bg: #f8f9fa;
+        --nav-hover-bg: #e6f0ff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg);
+        color: #333;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+        position: relative;
+      }
+
+      aside {
+        width: 240px;
+        background-color: #fff;
+        padding: 2rem 1rem;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        z-index: 1000;
+        transition: transform 0.3s ease;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--blue);
+        text-align: center;
+      }
+
+      nav {
+        display: flex;
+        flex-direction: column;
+      }
+
+      nav a {
+        text-decoration: none;
+        color: #333;
+        font-weight: 500;
+        padding: 0.8rem 1rem;
+        border-radius: 8px;
+        transition: 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        position: relative;
+      }
+
+      nav a::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background-color: var(--blue);
+        border-radius: 2px;
+        transform: scaleY(0);
+        transition: transform 0.2s ease;
+      }
+
+      nav a:hover {
+        background-color: var(--nav-hover-bg);
+        color: var(--blue);
+      }
+
+      nav a:hover::before {
+        transform: scaleY(1);
+      }
+
+      main {
+        flex: 1;
+        padding: 3rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .card {
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-3px);
+      }
+
+      .card h2 {
+        font-size: 1.8rem;
+        margin-bottom: 0.2rem;
+      }
+
+      .card span {
+        color: #888;
+        font-size: 0.9rem;
+      }
+
+      .charts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+
+      canvas {
+        width: 100%;
+        height: 300px !important;
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
+
+      .recent-activity {
+        background-color: #fff;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
+
+      .recent-activity h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .timeline {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .timeline li {
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #eee;
+        font-size: 1rem;
+        color: #444;
+      }
+
+      .timeline li:last-child {
+        border-bottom: none;
+      }
+
+      /* Hamburger Menu */
+      .hamburger {
+        display: none;
+        position: absolute;
+        top: 2.1rem;
+        left: 1.5rem;
+        font-size: 1.2rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        z-index: 1100;
+      }
+
+      .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.4);
+        z-index: 900;
+      }
+
+      @media (max-width: 768px) {
+        aside {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100vh;
+          transform: translateX(-100%);
+        }
+
+        aside.open {
+          transform: translateX(0);
+        }
+
+        .hamburger {
+          display: block;
+        }
+
+        .overlay.show {
+          display: block;
+        }
+
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <button class="hamburger" id="hamburger">☰</button>
+      <div class="overlay" id="overlay"></div>
+
+      <aside id="sidebar">
+        <div class="logo">Smart Attend</div>
+        <nav>
+          <a href="/live">📷 Live Attendance</a>
+          <a href="/view_attendance">📊 View Attendance</a>
+          <a href="/register">➕ Register Student</a>
+          <a href="/logout">🔓 Logout</a>
+        </nav>
+      </aside>
+
+      <main>
+        <div>
+          <h1 style="text-align: center">Welcome, Admin!</h1>
+          <p style="text-align: center; padding: 1vh 5vh">
+            Manage attendance using AI-powered facial recognition. Here are the
+            latest statistics:
+          </p>
+        </div>
+
+        <div class="stats">
+          <div class="card">
+            <h2>{{ total_students }}</h2>
+            <span>Total Students</span>
+          </div>
+          <div class="card">
+            <h2>{{ attendance_percent }}%</h2>
+            <span>Today's Attendance</span>
+          </div>
+          <div class="card">
+            <h2>{{ new_registrations }}</h2>
+            <span>New Registrations</span>
+          </div>
+          <div class="card">
+            <h2>{{ unrecognized_faces }}</h2>
+            <span>Unrecognized Faces</span>
+          </div>
+        </div>
+
+        <div class="charts">
+          <canvas id="attendanceTrendChart"></canvas>
+          <canvas id="dailyBreakdownChart"></canvas>
+        </div>
+
+        <div class="recent-activity">
+          <h2>🕒 Recent Verifications</h2>
+          <ul class="timeline">
+            {% for log in recent_verifications %}
+            <li>{{ log }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const chartData = {{ chart_data | tojson }};
+
+      new Chart(document.getElementById("attendanceTrendChart"), {
+        type: "line",
+        data: {
+          labels: chartData.labels,
+          datasets: [
+            {
+              label: "Attendance %",
+              data: chartData.values,
+              borderColor: "#007bff",
+              backgroundColor: "rgba(0, 123, 255, 0.1)",
+              tension: 0.4,
+              fill: true,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            },
+          ],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 10 },
+            },
+          },
+        },
+      });
+
+      new Chart(document.getElementById("dailyBreakdownChart"), {
+        type: "bar",
+        data: {
+          labels: ["Present", "Absent", "Late"],
+          datasets: [
+            {
+              label: "Students",
+              data: chartData.breakdown,
+              backgroundColor: ["#28a745", "#dc3545", "#ffc107"],
+              borderRadius: 6,
+              barThickness: 40,
+            },
+          ],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 10 },
+            },
+          },
+        },
+      });
+
+      // Hamburger toggle logic
+      const hamburger = document.getElementById("hamburger");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("overlay");
+
+      hamburger.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        overlay.classList.toggle("show");
+      });
+
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("show");
+      });
+    </script>
+  </body>
+</html>

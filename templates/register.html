@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <link rel="icon" href="{{ url_for('static', filename='face-scan.png') }}" type="image/x-icon">
+  <title>Register Student</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #ffffff;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1, h2 {
+      color: #0d6efd;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 22px;
+      background-color: #f5f7ff;
+      color: #0d6efd;
+      border: 1px solid #d0e2ff;
+      border-radius: 999px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 3px 8px rgba(13, 110, 253, 0.08);
+      transition: all 0.2s ease-in-out;
+      margin-bottom: 24px;
+    }
+
+    .btn:hover {
+      background-color: #e6f0ff;
+      transform: scale(1.03);
+      box-shadow: 0 5px 14px rgba(13, 110, 253, 0.15);
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      max-width: 900px;
+      margin: 0 auto 40px auto;
+      text-align: center;
+    }
+
+    input[type="text"] {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+      font-size: 16px;
+      margin-top: 12px;
+      box-sizing: border-box;
+    }
+
+    button[type="submit"] {
+      margin-top: 16px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #0d6efd;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button[type="submit"]:hover {
+      background: #0b5ed7;
+    }
+
+    .students {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .student-card {
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-radius: 12px;
+      padding: 16px;
+      width: 160px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .student-card img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #0d6efd;
+      margin-bottom: 10px;
+    }
+
+    .student-card strong {
+      color: #333;
+      font-size: 15px;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .delete-btn:hover {
+      background: #bb2d3b;
+    }
+
+    video {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 12px;
+      border: 2px solid #d0e2ff;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <a href="/" class="btn">← Back to Dashboard</a>
+
+  <h1>📸 Student Registration</h1>
+
+  <div class="card">
+    <video id="video" autoplay></video>
+    <form onsubmit="handleRegister(event)">
+      <input type="text" id="nameInput" placeholder="Enter student name" required />
+      <button type="submit">Register</button>
+    </form>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>👥 Registered Students</h2>
+    <div class="students">
+      {% for student in students %}
+      <div class="student-card">
+        <img src="{{ student.img_path }}" alt="{{ student.name }}">
+        <strong>{{ student.name }}</strong>
+        <form method="POST" action="{{ url_for('delete_student', name=student.name) }}">
+          <button class="delete-btn" type="submit">Delete</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+    });
+
+    function handleRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('nameInput').value.trim();
+      if (!name) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/jpeg');
+
+      fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          name: name,
+          imageData: imageData
+        })
+      }).then(() => {
+        window.location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
