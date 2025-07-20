@@ -2,7 +2,10 @@ services:
   - type: web
     name: face-attendance
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      echo "Clearing Poetry from path"
+      rm -f pyproject.toml poetry.lock
+      pip install -r requirements.txt
     startCommand: python app.py
     envVars:
       - key: PYTHON_VERSION
