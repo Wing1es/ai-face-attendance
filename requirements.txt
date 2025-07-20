@@ -3,5 +3,5 @@ torch
 facenet-pytorch
 opencv-python-headless
 numpy
-Pillow
+Pillow==10.2.0
 openpyxl
